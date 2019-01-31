@@ -1,0 +1,139 @@
+
+   Sub AnalyzeQuotes()
+
+    Dim DataRowIndex As Double                  'Pointers for ticker data and output table
+    Dim OutputTableIndex As Double
+    Dim RowCount As Double
+    
+    Dim CurrentTicker As String                 'Used to hold ticker value to compare to current row while iterating through ticker data
+    
+    
+    Dim TotalVolume As Double                   'Variables to calculate values for each ticker value while iterating through ticker data
+    Dim StartValue As Double
+    Dim EndValue As Double
+    Dim YearlyChange As Double
+    
+    Dim PreviousDate As Double                  'Holds date to compare date to next row while itrating through block of each ticker value
+    
+    
+    Range("I1:Q1").EntireColumn.Delete          'Set up and format sheet area for output values
+    Range("I1").ColumnWidth = 8
+    Range("J1").ColumnWidth = 13
+    Range("K1").ColumnWidth = 14
+    Range("L1").ColumnWidth = 17
+    Range("O1").ColumnWidth = 20
+    Range("Q1").ColumnWidth = 10
+    Columns(11).NumberFormat = "0.00%"
+    Cells(1, 9).Value = "Ticker"
+    Cells(1, 10).Value = "Yearly Change"
+    Cells(1, 11).Value = "Percent Change"
+    Cells(1, 12).Value = "Total Stock Volume"
+    
+    
+    DataRowIndex = 2                            'Initialize pointers to start below column headers
+    OutputTableIndex = 2
+    
+    CurrentTicker = ""
+    
+    
+    RowCount = Cells(Rows.Count, 1).End(xlUp).Row                       'Calculate number of rows to loop through
+    
+    For DataRowIndex = 2 To RowCount                                    'Loop through all data rows in sheet
+                          
+        If Cells(DataRowIndex, 1).Value = CurrentTicker Then            'Check to see if still in block of same ticker value
+                                                                        'While in a block of rows with same ticker value:
+            TotalVolume = TotalVolume + Cells(DataRowIndex, 7).Value    'Accumulate total volume
+            
+            If Cells(DataRowIndex, 2).Value > PreviousDate Then         'If the date of current row is past the date of
+                LastValue = Cells(DataRowIndex, 6).Value                'the previous date save stock price
+            End If
+            
+            PreviousDate = Cells(DataRowIndex, 2).Value                 'Save date to compare to next row's date
+            
+        Else                                                            'On the first row of a block rows with same ticker value
+                                                                    
+            CurrentTicker = Cells(DataRowIndex, 1).Value                'Save the ticker value to compare to next row
+            
+            Cells(OutputTableIndex, 9).Value = Cells(DataRowIndex, 1).Value         'Enter ticker value on new row in output table
+            
+            TotalVolume = Cells(DataRowIndex, 7).Value                  'Enter daily volume where total volume will be accumulated
+                                                                        'successive rows for current ticker value
+                                                                        
+            StartValue = Cells(DataRowIndex, 6).Value                   'Get closing value and store in both starting and end dates
+            LastValue = Cells(DataRowIndex, 6).Value
+            PreviousDate = Cells(DataRowIndex, 2).Value                 'Store transaction date to compare with next row in block
+            
+        End If
+   
+   
+        If Cells(DataRowIndex, 1).Value <> Cells(DataRowIndex + 1, 1).Value Then
+        
+                                                                        'Check next row ticker value to determine if on the last row of block
+            YearlyChange = LastValue - StartValue                       'Calculate yearly value change and write to output table
+            Cells(OutputTableIndex, 10).Value = YearlyChange
+            
+            If YearlyChange >= 0 Then                                   'Format to indicate increase or decrease in yearly value change
+                    Cells(OutputTableIndex, 10).Interior.ColorIndex = 4
+                Else
+                    Cells(OutputTableIndex, 10).Interior.ColorIndex = 3
+            End If
+            
+            If StartValue = 0 Then                                      'Calculate yearly percentage and write to output table
+                Cells(OutputTableIndex, 11).Value = 0                   ' (Avoid dividing by 0)
+            Else
+                Cells(OutputTableIndex, 11).Value = YearlyChange / StartValue
+            End If
+            
+            Cells(OutputTableIndex, 12).Value = TotalVolume             'Write accumulated volume to output table
+            
+            OutputTableIndex = OutputTableIndex + 1                     'Set pointer to new row in output table
+        End If
+        
+    Next DataRowIndex
+    
+    
+    Cells(2, 15).Value = "Greatest % Increase"                          'Set up and format table for yearly high/low values
+    Cells(3, 15).Value = "Greatest % Decrease"
+    Cells(4, 15).Value = "Greatest Total Volume"
+    Cells(1, 16).Value = "Ticker"
+    Cells(1, 17).Value = "Value"
+    
+    Range("Q2:Q4") = 0
+    Range("Q2:Q3").NumberFormat = "0.00%"
+    OutputTableIndex = 2
+    
+    
+    RowCount = Cells(Rows.Count, 9).End(xlUp).Row                       'Calculate number of rows of output table to loop through
+    
+    For OutputTableIndex = 2 To RowCount                                'For each row:
+    
+        If Cells(OutputTableIndex, 11).Value > Cells(2, 17) Then            'If yearly % change is greater than current high value,
+            Cells(2, 16).Value = Cells(OutputTableIndex, 9).Value            'replace with current row's value
+            Cells(2, 17).Value = Cells(OutputTableIndex, 11).Value
+        End If
+        
+        If Cells(OutputTableIndex, 11).Value < Cells(3, 17).Value Then      'If yearly % change is less than current low value,
+            Cells(3, 16).Value = Cells(OutputTableIndex, 9).Value           'replace with current row's value
+            Cells(3, 17).Value = Cells(OutputTableIndex, 11).Value
+        End If
+        
+        If Cells(OutputTableIndex, 12).Value > Cells(4, 17).Value Then      'If yearly total volume is greater that current high value
+            Cells(4, 16).Value = Cells(OutputTableIndex, 9).Value           'replace with current row's value
+            Cells(4, 17).Value = Cells(OutputTableIndex, 12).Value
+        End If
+        
+    Next OutputTableIndex
+    
+End Sub
+
+
+Sub WorksheetLoop()                     'Loops through all sheets in workbook and calls code to analyze stock quote data
+
+    Dim ws As Worksheet
+
+    For Each ws In ThisWorkbook.Sheets
+        ws.Activate
+        Call AnalyzeQuotes
+    Next ws
+
+End Sub
